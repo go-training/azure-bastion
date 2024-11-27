@@ -60,13 +60,32 @@ func main() {
 		}
 
 		// Create a Subnet (VM)
-		_, err = network.NewSubnet(ctx, configName("snet-vm"), &network.SubnetArgs{
+		vmSubnetwork, err := network.NewSubnet(ctx, configName("snet-vm"), &network.SubnetArgs{
 			AddressPrefix:                     pulumi.String(vmSubnet),
 			ResourceGroupName:                 resourceGroup.Name,
 			SubnetName:                        pulumi.String(configName("snet-vm")),
 			VirtualNetworkName:                vnet.Name,
 			PrivateEndpointNetworkPolicies:    pulumi.String("Enabled"),
 			PrivateLinkServiceNetworkPolicies: pulumi.String("Enabled"),
+		})
+		if err != nil {
+			return err
+		}
+
+		// create vm netowrk interface
+		_, err = network.NewNetworkInterface(ctx, configName("nic-vm"), &network.NetworkInterfaceArgs{
+			IpConfigurations: network.NetworkInterfaceIPConfigurationArray{
+				&network.NetworkInterfaceIPConfigurationArgs{
+					Name: pulumi.String("internal"),
+					Subnet: &network.SubnetTypeArgs{
+						Id: vmSubnetwork.ID(),
+					},
+					PrivateIPAllocationMethod: pulumi.String("Dynamic"),
+				},
+			},
+			Location:             resourceGroup.Location,
+			NetworkInterfaceName: pulumi.String(configName("nic-vm")),
+			ResourceGroupName:    resourceGroup.Name,
 		})
 		if err != nil {
 			return err
