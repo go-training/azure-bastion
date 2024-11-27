@@ -47,10 +47,10 @@ func main() {
 		}
 
 		// Create a Subnet (bastion)
-		_, err = network.NewSubnet(ctx, configName("snet-bastion"), &network.SubnetArgs{
+		bastionNetwork, err := network.NewSubnet(ctx, configName("snet-bastion"), &network.SubnetArgs{
 			AddressPrefix:                     pulumi.String(bastionSubnet),
 			ResourceGroupName:                 resourceGroup.Name,
-			SubnetName:                        pulumi.String(configName("snet-bastion")),
+			SubnetName:                        pulumi.String("AzureBastionSubnet"),
 			VirtualNetworkName:                vnet.Name,
 			PrivateEndpointNetworkPolicies:    pulumi.String("Enabled"),
 			PrivateLinkServiceNetworkPolicies: pulumi.String("Enabled"),
@@ -60,7 +60,7 @@ func main() {
 		}
 
 		// Create a Subnet (VM)
-		vmSubnetwork, err := network.NewSubnet(ctx, configName("snet-vm"), &network.SubnetArgs{
+		vmNetwork, err := network.NewSubnet(ctx, configName("snet-vm"), &network.SubnetArgs{
 			AddressPrefix:                     pulumi.String(vmSubnet),
 			ResourceGroupName:                 resourceGroup.Name,
 			SubnetName:                        pulumi.String(configName("snet-vm")),
@@ -78,7 +78,7 @@ func main() {
 				&network.NetworkInterfaceIPConfigurationArgs{
 					Name: pulumi.String("internal"),
 					Subnet: &network.SubnetTypeArgs{
-						Id: vmSubnetwork.ID(),
+						Id: vmNetwork.ID(),
 					},
 					PrivateIPAllocationMethod: pulumi.String("Dynamic"),
 				},
@@ -86,6 +86,48 @@ func main() {
 			Location:             resourceGroup.Location,
 			NetworkInterfaceName: pulumi.String(configName("nic-vm")),
 			ResourceGroupName:    resourceGroup.Name,
+		})
+		if err != nil {
+			return err
+		}
+
+		// create public ip
+		bastionIP, err := network.NewPublicIPAddress(ctx, configName("pip-bastion"), &network.PublicIPAddressArgs{
+			IdleTimeoutInMinutes:     pulumi.Int(5),
+			Location:                 resourceGroup.Location,
+			PublicIpAddressName:      pulumi.String(configName("pip-bastion")),
+			ResourceGroupName:        resourceGroup.Name,
+			PublicIPAllocationMethod: pulumi.String(network.IPAllocationMethodStatic),
+			PublicIPAddressVersion:   pulumi.String(network.IPVersionIPv4),
+			Sku: &network.PublicIPAddressSkuArgs{
+				Name: pulumi.String(network.PublicIPAddressSkuNameStandard),
+				Tier: pulumi.String(network.PublicIPAddressSkuTierGlobal),
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		// create bastion host
+		_, err = network.NewBastionHost(ctx, configName("bastion-host"), &network.BastionHostArgs{
+			BastionHostName: pulumi.String(configName("bastion-host")),
+			EnableTunneling: pulumi.Bool(true),
+			IpConfigurations: network.BastionHostIPConfigurationArray{
+				&network.BastionHostIPConfigurationArgs{
+					Name: pulumi.String(configName("bastionz-host-config")),
+					PublicIPAddress: &network.SubResourceArgs{
+						Id: bastionIP.ID(),
+					},
+					Subnet: &network.SubResourceArgs{
+						Id: bastionNetwork.ID(),
+					},
+				},
+			},
+			Location:          resourceGroup.Location,
+			ResourceGroupName: resourceGroup.Name,
+			Sku: &network.SkuArgs{
+				Name: pulumi.String(network.PublicIPAddressSkuNameStandard),
+			},
 		})
 		if err != nil {
 			return err
