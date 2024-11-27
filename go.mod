@@ -3,8 +3,8 @@ module azure-bastion
 go 1.21
 
 require (
+	github.com/pulumi/pulumi-azure-native-sdk/network/v2 v2.74.0
 	github.com/pulumi/pulumi-azure-native-sdk/resources/v2 v2.42.1
-	github.com/pulumi/pulumi-azure-native-sdk/storage/v2 v2.42.1
 	github.com/pulumi/pulumi/sdk/v3 v3.141.0
 )
 

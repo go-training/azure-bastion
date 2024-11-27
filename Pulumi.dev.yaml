@@ -2,6 +2,6 @@ encryptionsalt: v1:+ofsDwvuAmg=:v1:YmhxYSaeCmFEqoqx:5MJvwqHpiqs9EELfrbVEhzudRTrX
 config:
   azure-native:location: southeastasia
   azure:resourceGroupName: azure-bastion-demo
-  azure:storageAccount: azuredemosa
-  azure:subnet: 10.0.100.0/27
+  azure:bastionSubnet: 10.0.100.0/26
+  azure:vmSubnet: 10.0.100.64/29
   azure:vnet: 10.0.100.0/24

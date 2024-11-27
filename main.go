@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/pulumi/pulumi-azure-native-sdk/network/v2"
 	"github.com/pulumi/pulumi-azure-native-sdk/resources/v2"
-	"github.com/pulumi/pulumi-azure-native-sdk/storage/v2"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
@@ -15,7 +15,10 @@ func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 		conf := config.New(ctx, "azure")
 		resourceGroupName := conf.Require("resourceGroupName")
-		storageAccount := conf.Require("storageAccount")
+		vnetIP := conf.Require("vnet")
+		bastionSubnet := conf.Require("bastionSubnet")
+		vmSubnet := conf.Require("vmSubnet")
+
 		configName := func(module string) string {
 			return ModuleName(resourceGroupName, module)
 		}
@@ -27,35 +30,47 @@ func main() {
 			return err
 		}
 
-		// Create an Azure resource (Storage Account)
-		account, err := storage.NewStorageAccount(ctx, configName("sa"), &storage.StorageAccountArgs{
-			ResourceGroupName: resourceGroup.Name,
-			AccountName:       pulumi.String(storageAccount),
-			Sku: &storage.SkuArgs{
-				Name: pulumi.String("Standard_LRS"),
+		// Create a Virtual Network
+		vnet, err := network.NewVirtualNetwork(ctx, configName("vnet"), &network.VirtualNetworkArgs{
+			AddressSpace: &network.AddressSpaceArgs{
+				AddressPrefixes: pulumi.StringArray{
+					pulumi.String(vnetIP),
+				},
 			},
-			Kind: pulumi.String("StorageV2"),
+			FlowTimeoutInMinutes: pulumi.Int(10),
+			Location:             resourceGroup.Location,
+			ResourceGroupName:    resourceGroup.Name,
+			VirtualNetworkName:   pulumi.String(configName("vnet")),
 		})
 		if err != nil {
 			return err
 		}
 
-		// Export the primary key of the Storage Account
-		ctx.Export("primaryStorageKey", pulumi.All(resourceGroup.Name, account.Name).ApplyT(
-			func(args []interface{}) (string, error) {
-				resourceGroupName := args[0].(string)
-				accountName := args[1].(string)
-				accountKeys, err := storage.ListStorageAccountKeys(ctx, &storage.ListStorageAccountKeysArgs{
-					ResourceGroupName: resourceGroupName,
-					AccountName:       accountName,
-				})
-				if err != nil {
-					return "", err
-				}
+		// Create a Subnet (bastion)
+		_, err = network.NewSubnet(ctx, configName("snet-bastion"), &network.SubnetArgs{
+			AddressPrefix:                     pulumi.String(bastionSubnet),
+			ResourceGroupName:                 resourceGroup.Name,
+			SubnetName:                        pulumi.String(configName("snet-bastion")),
+			VirtualNetworkName:                vnet.Name,
+			PrivateEndpointNetworkPolicies:    pulumi.String("Enabled"),
+			PrivateLinkServiceNetworkPolicies: pulumi.String("Enabled"),
+		})
+		if err != nil {
+			return err
+		}
 
-				return accountKeys.Keys[0].Value, nil
-			},
-		))
+		// Create a Subnet (VM)
+		_, err = network.NewSubnet(ctx, configName("snet-vm"), &network.SubnetArgs{
+			AddressPrefix:                     pulumi.String(vmSubnet),
+			ResourceGroupName:                 resourceGroup.Name,
+			SubnetName:                        pulumi.String(configName("snet-vm")),
+			VirtualNetworkName:                vnet.Name,
+			PrivateEndpointNetworkPolicies:    pulumi.String("Enabled"),
+			PrivateLinkServiceNetworkPolicies: pulumi.String("Enabled"),
+		})
+		if err != nil {
+			return err
+		}
 
 		return nil
 	})
