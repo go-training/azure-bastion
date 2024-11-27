@@ -110,8 +110,12 @@ func main() {
 
 		// create bastion host
 		_, err = network.NewBastionHost(ctx, configName("bastion-host"), &network.BastionHostArgs{
-			BastionHostName: pulumi.String(configName("bastion-host")),
-			EnableTunneling: pulumi.Bool(true),
+			BastionHostName:     pulumi.String(configName("bastion-host")),
+			EnableTunneling:     pulumi.Bool(true),
+			EnableShareableLink: pulumi.Bool(false),
+			EnableFileCopy:      pulumi.Bool(false),
+			EnableIpConnect:     pulumi.Bool(false),
+			EnableKerberos:      pulumi.Bool(false),
 			IpConfigurations: network.BastionHostIPConfigurationArray{
 				&network.BastionHostIPConfigurationArgs{
 					Name: pulumi.String(configName("bastionz-host-config")),
