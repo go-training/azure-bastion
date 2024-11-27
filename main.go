@@ -4,22 +4,33 @@ import (
 	"github.com/pulumi/pulumi-azure-native-sdk/resources/v2"
 	"github.com/pulumi/pulumi-azure-native-sdk/storage/v2"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
+
+func ModuleName(rg, name string) string {
+	return rg + "-" + name
+}
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
+		conf := config.New(ctx, "azure")
+		resourceGroupName := conf.Require("resourceGroupName")
+		storageAccount := conf.Require("storageAccount")
+		configName := func(module string) string {
+			return ModuleName(resourceGroupName, module)
+		}
 		// Create an Azure Resource Group
-		resourceGroup, err := resources.NewResourceGroup(ctx, "rg", &resources.ResourceGroupArgs{
-			ResourceGroupName: pulumi.String("azure-bastion"),
+		resourceGroup, err := resources.NewResourceGroup(ctx, configName("rg"), &resources.ResourceGroupArgs{
+			ResourceGroupName: pulumi.String(resourceGroupName),
 		})
 		if err != nil {
 			return err
 		}
 
 		// Create an Azure resource (Storage Account)
-		account, err := storage.NewStorageAccount(ctx, "sa", &storage.StorageAccountArgs{
+		account, err := storage.NewStorageAccount(ctx, configName("sa"), &storage.StorageAccountArgs{
 			ResourceGroupName: resourceGroup.Name,
-			AccountName:       pulumi.String("storageaccountgo"),
+			AccountName:       pulumi.String(storageAccount),
 			Sku: &storage.SkuArgs{
 				Name: pulumi.String("Standard_LRS"),
 			},
