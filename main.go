@@ -101,7 +101,7 @@ func main() {
 			PublicIPAddressVersion:   pulumi.String(network.IPVersionIPv4),
 			Sku: &network.PublicIPAddressSkuArgs{
 				Name: pulumi.String(network.PublicIPAddressSkuNameStandard),
-				Tier: pulumi.String(network.PublicIPAddressSkuTierGlobal),
+				Tier: pulumi.String(network.PublicIPAddressSkuTierRegional),
 			},
 		})
 		if err != nil {
