@@ -2,11 +2,11 @@
 
 ## Overview
 
-This repository contains a Pulumi sample code that deploys an Azure Bastion service. See the [Azure Bastion documentation](https://docs.microsoft.com/en-us/azure/bastion/bastion-overview) for more information.
+This repository contains sample Pulumi code that deploys an Azure Bastion service. For more information, see the [Azure Bastion documentation](https://docs.microsoft.com/en-us/azure/bastion/bastion-overview).
 
 ## Prerequisites
 
-To list all available locations, use the az account list-locations command.
+To list all available locations, use the `az account list-locations` command.
 
 ```bash
 az account list-locations --output table
